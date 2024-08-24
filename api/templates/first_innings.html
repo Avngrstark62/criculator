@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cricket Website - First Innings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  </head>
+  <body>
+    {% if not inning_started %}
+    <h1>Select Openers and Bowlers</h1>
+    <form action="/first_innings" method="post" onsubmit="return validateOpeners()">
+      <input type="hidden" name="form_type" value="select_openers">
+        <h2>Select Openers:</h2>
+      <label for="opener1">Opener 1:</label>
+      <select id="opener1" name="opener1">
+          {% for player in batting_1st %}
+              <option value="{{ player }}">{{ player }}</option>
+          {% endfor %}
+      </select><br><br>
+
+
+      <label for="opener2">Opener 2:</label>
+      <select id="opener2" name="opener2">
+        {% for player in batting_1st %}
+            <option value="{{ player }}">{{ player }}</option>
+        {% endfor %}
+      </select><br><br>
+
+        <h2>Select Bowler:</h2>
+        <label for="bowler">Bowler:</label>
+      <select id="bowler" name="bowler">
+        {% for player in batting_2nd %}
+            <option value="{{ player }}">{{ player }}</option>
+        {% endfor %}
+      </select><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+    {% else %}
+        {% if not inning_ended %}
+         <h1>First Innings</h1>
+
+              {% if wicket_fallen %}
+                    <form action="/first_innings" method='post'>
+                      <input type="hidden" name="form_type" value="select_new_batsman">
+                      
+                      {% if who_is_out == "striker" %}
+                          <input type="hidden" name="who_is_out" value="striker">
+                      {% elif who_is_out == "non_striker" %}
+                          <input type="hidden" name="who_is_out" value="non_striker">
+                      {% endif %}
+                      <label for="new_batsman">New Batsman:</label>
+                      <select id="new_batsman" name="new_batsman">
+                          {% for player in batting_left %}
+                              <option value="{{ player }}">{{ player }}</option>
+                          {% endfor %}
+                      </select><br><br>
+                      <button type="submit" class="btn btn-primary">Enter</button>
+                    </form>
+              {% endif %}
+
+
+              {% if over_is_done %}
+                    <form action="/first_innings" method='post'>
+                      <input type="hidden" name="form_type" value="select_new_bowler">
+                      <label for="new_bowler">New Bowler:</label>
+                      <select id="new_bowler" name="new_bowler">
+                          {% for player in batting_2nd %}
+                              <option value="{{ player }}">{{ player }}</option>
+                          {% endfor %}
+                      </select><br><br>
+                      <button type="submit" class="btn btn-primary">Enter</button>
+                    </form>
+              {% endif %}
+
+
+              {% if not wicket_fallen and not over_is_done %}
+                    <form action="/first_innings" method='post'>
+                      <input type="hidden" name="form_type" value="play_risky">
+                      <button type="submit" class="btn btn-primary">Play Risky</button>
+                      <input type="hidden" name="form_type" value="play_normal">
+                      <button type="submit" class="btn btn-primary">Play Normal</button>
+                      <input type="hidden" name="form_type" value="play_safe">
+                      <button type="submit" class="btn btn-primary">Play Safe</button>
+                    </form>
+               {% endif %}
+
+    
+        {% else %}
+               <h1>inning ended</h1>
+               <a class="btn btn-primary" href="/second_innings" role="button">Start Second Innings</a>
+        {% endif %}
+
+    
+
+    {%if current_ball_dict%}
+          <h2>This Ball</h2>
+
+          {% if current_ball_dict.bye != None %}
+              <p>{{current_ball_dict.bye}}B</p>
+          {% elif current_ball_dict.wide != None and current_ball_dict.wide != "stumped" %}
+              <p>{{current_ball_dict.wide}}Wd</p>
+          {% elif current_ball_dict.wide != None and current_ball_dict.wide == "stumped" %}
+              <p>Wicket + Wd</p>
+          {% elif current_ball_dict.wicket_type != None and  current_ball_dict.bat_runs == 0%}
+              <p>Wicket</p>
+          {% elif current_ball_dict.wicket_type != None and  current_ball_dict.bat_runs != 0%}
+          <p>{{current_ball_dict.bat_runs}} + Wicket</p>
+          {% else %}
+              <p>{{ current_ball_dict.bat_runs }}</p>
+          {% endif %}
+          {% if current_ball_dict.noball != None%}
+               <p>NOBALL</p>
+          {% endif %}
+
+    {% endif %}
+
+
+    
+    <h2>Score</h2>
+    <p>{{read_scoreboard['team_name']}} | {{read_scoreboard['runs']}}-{{read_scoreboard['wickets']}}/{{read_scoreboard['overs']}}</p>
+    <p>{{striker_list[0]}}{{striker_list[3]}} : {{striker_list[1]}}({{striker_list[2]}})</p>
+    <p>{{non_striker_list[0]}}{{non_striker_list[3]}} : {{non_striker_list[1]}}({{non_striker_list[2]}})</p>
+    <p>{{bowler_list[0]}} : {{bowler_list[1]}}-{{bowler_list[2]}}({{bowler_list[3]}})</p>
+    <p>Extras | {{read_scoreboard['extras']}}</p>
+
+    <h2>Batting Scorecard</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Runs</th>
+                <th>Balls</th>
+                <th>Fours</th>
+                <th>Sixes</th>
+                <th>Wicket Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in batting_data %}
+                <tr>
+                    <td>{{ entry.name }}</td>
+                    <td>{{ entry.runs }}</td>
+                    <td>{{ entry.balls }}</td>
+                    <td>{{ entry.fours }}</td>
+                    <td>{{ entry.sixes }}</td>
+                    <td>{{ entry.wicket_type }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Bowling Scorecard</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Maidens</th>
+                <th>Overs</th>
+                <th>Runs</th>
+                <th>Wickets</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in bowling_data %}
+                <tr>
+                    <td>{{ entry.name }}</td>
+                    <td>{{ entry.maidens }}</td>
+                    <td>{{ entry.overs }}</td>
+                    <td>{{ entry.runs }}</td>
+                    <td>{{ entry.wickets }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% endif %}
+
+
+
+    <script>
+      function validateOpeners() {
+          var opener1 = document.getElementById('opener1').value;
+          var opener2 = document.getElementById('opener2').value;
+
+          if (opener1 === opener2) {
+              alert("Please select different players for Opener 1 and Opener 2.");
+              return false; // Prevent form submission if values are the same
+          }
+          return true; // Continue form submission if values are different
+      }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  </body>
+</html>
